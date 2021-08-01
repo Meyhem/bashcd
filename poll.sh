@@ -13,7 +13,7 @@ echo "HASH $HEAD_HASH"
 echo "FILE $(cat $STATE_FILE)"
 
 # no state yet or state has different commit hash
-if [ ! -f STATE_FILE ] || [ "$(cat $STATE_FILE)" != "$HEAD_HASH" ]; then
+if [ ! -f $STATE_FILE ] || [ "$(cat $STATE_FILE)" != "$HEAD_HASH" ]; then
     echo $HEAD_HASH > $STATE_FILE
     echo "has-changes"
     exit

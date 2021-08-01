@@ -12,7 +12,6 @@ function cleanup {
     rm $LOCK_DIR/pipeline.lock
 }
 
-
 if [ -z "$WORK_DIR" ]; then
     die "WORK_DIR not defined"
 fi
@@ -26,7 +25,6 @@ export LOG_DIR=$WORK_DIR/log
 export LOG_FILE=$LOG_DIR/$PIPELINE_RUN_ID.log
 export STATE_DIR=$WORK_DIR/state
 export ARTIFACT_DIR=$WORK_DIR/artifact
-
 export PIPELINE_LOCK_FILE=$LOCK_DIR/pipeline.lock
 
 . $SCRIPT_DIR/config.sh
@@ -55,4 +53,3 @@ pushd $SOURCE_DIR &> /dev/null
 popd &> /dev/null
 
 cleanup
-exit
