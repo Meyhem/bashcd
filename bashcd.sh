@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -o pipefail
 
 function die {
     echo "Error: $1" >&2
@@ -10,6 +11,7 @@ function die {
 function cleanup {
     rm -rf $SOURCE_DIR
     rm $LOCK_DIR/pipeline.lock
+    mv $LOG_FILE $LOG_DIR/$PIPELINE_RUN_ID-$PIPELINE_STATUS.log
 }
 
 if [ -z "$WORK_DIR" ]; then
@@ -26,6 +28,9 @@ export LOG_FILE=$LOG_DIR/$PIPELINE_RUN_ID.log
 export STATE_DIR=$WORK_DIR/state
 export ARTIFACT_DIR=$WORK_DIR/artifact
 export PIPELINE_LOCK_FILE=$LOCK_DIR/pipeline.lock
+export LOG_RETENTION_DAYS="+1"
+
+PIPELINE_STATUS="success"
 
 . $SCRIPT_DIR/config.sh
 
@@ -37,19 +42,41 @@ touch $PIPELINE_LOCK_FILE
 rm -rf $SOURCE_DIR
 mkdir -p $WORK_DIR $SOURCE_DIR $LOCK_DIR $LOG_DIR $STATE_DIR $ARTIFACT_DIR
 
-# get last echo, should contain result of Polling
-POLL_RESULT=$($SCRIPT_DIR/poll.sh | tee -a $LOG_FILE | tail -n1)
+# remove all logs except configured retention
+find $LOG_DIR -type f -name "*.log" -mtime +$LOG_RETENTION_DAYS -delete
 
-echo "POLL RES $POLL_RESULT"
+# get last echo, should contain result of Polling
+set +e
+POLL_RESULT=$($SCRIPT_DIR/poll.sh 2>&1 | tee -a $LOG_FILE | tail -n1)
+POLL_EXIT=$?
+set -e
+
+if [ $POLL_EXIT != "0" ]; then
+    PIPELINE_STATUS="pollfailed"
+    echo "Poll failed with non-zero status, exiting" >> $LOG_FILE
+    cleanup
+    exit 1
+fi
 
 if [ "$POLL_RESULT" != "has-changes" ]; then 
+    PIPELINE_STATUS="nochange"
+    echo "No changes detected, exiting" >> $LOG_FILE
     cleanup
-    echo "No changes detected, exiting"
     exit
 fi
 
-pushd $SOURCE_DIR &> /dev/null
-. $SCRIPT_DIR/run.sh || "$SCRIPT_DIR/run.sh failed on error"
-popd &> /dev/null
+pushd $SOURCE_DIR > /dev/null
+set +e
+$SCRIPT_DIR/run.sh >> $LOG_FILE 2>&1
+EXEC_EXIT=$?
+set -e
+popd > /dev/null
+
+if [ $EXEC_EXIT != "0" ]; then
+    echo "Execution failed with non-zero status, exiting" >> $LOG_FILE
+    PIPELINE_STATUS="execfailed"
+    cleanup
+    exit 1
+fi
 
 cleanup
