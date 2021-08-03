@@ -11,7 +11,12 @@ function die {
 function cleanup {
     rm -rf $SOURCE_DIR
     rm $LOCK_DIR/pipeline.lock
-    mv $LOG_FILE $LOG_DIR/$PIPELINE_RUN_ID-$PIPELINE_STATUS.log
+
+    if [ $PIPELINE_STATUS != "nochange" ] || [ "$KEEP_NOCHANGE_LOGS" == "true" ]; then
+        mv $LOG_FILE $LOG_DIR/$PIPELINE_RUN_ID-$PIPELINE_STATUS.log
+    else
+        rm $LOG_FILE
+    fi
 }
 
 if [ -z "$WORK_DIR" ]; then
@@ -29,6 +34,7 @@ export STATE_DIR=$WORK_DIR/state
 export ARTIFACT_DIR=$WORK_DIR/artifact
 export PIPELINE_LOCK_FILE=$LOCK_DIR/pipeline.lock
 export LOG_RETENTION_DAYS="+1"
+export KEEP_NOCHANGE_LOGS=false
 
 PIPELINE_STATUS="success"
 
