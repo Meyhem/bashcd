@@ -45,12 +45,14 @@ if [ -f PIPELINE_LOCK_FILE ]; then
 fi
 touch $PIPELINE_LOCK_FILE
 
-rm -rf $SOURCE_DIR
+rm -rf $SOURCE_DIR $ARTIFACT_DIR
 mkdir -p $WORK_DIR $SOURCE_DIR $LOCK_DIR $LOG_DIR $STATE_DIR $ARTIFACT_DIR
 
 # remove all logs except configured retention
 find $LOG_DIR -type f -name "*.log" -mtime +$LOG_RETENTION_DAYS -delete
 
+
+echo "--- POLLING STAGE ---" >> $LOG_FILE
 # get last echo, should contain result of Polling
 set +e
 POLL_RESULT=$($SCRIPT_DIR/poll.sh 2>&1 | tee -a $LOG_FILE | tail -n1)
@@ -71,6 +73,8 @@ if [ "$POLL_RESULT" != "has-changes" ]; then
     exit
 fi
 
+echo "--- RUN STAGE ---" >> $LOG_FILE
+
 pushd $SOURCE_DIR > /dev/null
 set +e
 $SCRIPT_DIR/run.sh >> $LOG_FILE 2>&1
@@ -79,7 +83,7 @@ set -e
 popd > /dev/null
 
 if [ $EXEC_EXIT != "0" ]; then
-    echo "Execution failed with non-zero status, exiting" >> $LOG_FILE
+    echo "Execution of 'run.sh' failed with non-zero status, exiting" >> $LOG_FILE
     PIPELINE_STATUS="execfailed"
     cleanup
     exit 1
