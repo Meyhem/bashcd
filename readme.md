@@ -2,6 +2,12 @@
 
 Simple cron-friendly polling continuous deployment script.
 
+- [Setup](#1-configure-configsh)
+- [Variables](#-variables)
+- [Polling](#-polling---pollsh)
+- [Logs](#-logs)
+- [Locks](#-locks)
+
 ## &bull; Setup
 ### 1. Configure `config.sh`
 ```sh
@@ -47,7 +53,7 @@ $LOG_FILE
 $ARTIFACT_DIR 
 ```
 
-## &bull; poll.sh
+## &bull; Polling - poll.sh
 By default it contains GIT poller that checks whether there is new HEAD hash in git repo and compares it with previous poll.
 
 `poll.sh` is expected to download all necessary sources and put them into $SOURCE_DIR and print either "has-changes" or "no-changes".
